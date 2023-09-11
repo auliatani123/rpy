@@ -1,0 +1,64 @@
+import RPi.GPIO as GPIO
+import time
+
+# Konfigurasi pin
+TRIG_PIN = 17  # GPIO pin untuk sinyal trigger sensor ultrasonik
+ECHO_PIN = 27  # GPIO pin untuk sinyal echo sensor ultrasonik
+SERVO_PIN = 12  # GPIO pin untuk servo motor
+
+# Inisialisasi GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(TRIG_PIN, GPIO.OUT)
+GPIO.setup(ECHO_PIN, GPIO.IN)
+GPIO.setup(SERVO_PIN, GPIO.OUT)
+
+# Fungsi untuk mengukur jarak dengan sensor ultrasonik
+def measure_distance():
+    GPIO.output(TRIG_PIN, True)
+    time.sleep(0.2)
+    GPIO.output(TRIG_PIN, False)
+    
+    pulse_start = time.time()
+    pulse_end = time.time()
+    
+    while GPIO.input(ECHO_PIN) == 0:
+        pulse_start = time.time()
+    
+    while GPIO.input(ECHO_PIN) == 1:
+        pulse_end = time.time()
+    
+    pulse_duration = pulse_end - pulse_start
+    distance = pulse_duration * 17150  # Perhitungan jarak
+    
+    return round(distance, 2)
+
+# Fungsi untuk menggerakkan servo motor
+def move_servo(angle):
+    pwm = GPIO.PWM(SERVO_PIN, 50)  # PWM dengan frekuensi 50 Hz
+    pwm.start(0)
+    duty_cycle = (angle / 18) + 2  # Konversi sudut menjadi siklus tugas PWM
+    GPIO.output(SERVO_PIN, True)
+    pwm.ChangeDutyCycle(duty_cycle)
+    time.sleep(1)
+    GPIO.output(SERVO_PIN, False)
+    pwm.ChangeDutyCycle(0)
+    pwm.stop()
+try:
+    while True:
+        distance = measure_distance()
+        print(f"Jarak: {distance} cm")
+        
+        if distance > 9:
+            print("Membuka pintu (gerakan servo ke posisi tertentu)")
+            move_servo(90)  # Ubah angka 90 sesuai dengan posisi yang Anda inginkan
+        else:
+            print("Menutup pintu (gerakan servo ke posisi lain)")
+            move_servo(180)   # Ubah angka 0 sesuai dengan posisi yang Anda inginkan
+        
+        time.sleep(1)
+
+except KeyboardInterrupt:
+    print("Pengukuran dihentikan oleh pengguna")
+finally:
+    GPIO.cleanup()
+
